@@ -1,0 +1,57 @@
+PULSEWIRE PROJECT PLAN - 10 WEEKS
+
+The work is split evenly between three teams. Each team has a clear part of the project to build. Teams share their work at the end of each week.
+
+TEAM A: News feeds and database
+TEAM B: Backend, search, and AI features
+TEAM C: Website, connections, and checks
+
+WEEK 1 - Learn the project
+Team A: Read about RSS feeds and learn how the project stores news data.
+Team B: Learn the Python, FastAPI, SQLite, and AI tools used in the project.
+Team C: Learn Streamlit, HTML, CSS, and JavaScript used for the website.
+
+WEEK 2 - Try the technologies
+Team A: Try reading sample RSS feeds and decide what news details to save.
+Team B: Try making a small API and saving sample data in SQLite.
+Team C: Make a simple page and try connecting it to a sample API.
+
+WEEK 3 - Build the basic project
+Team A: Build the database tables for articles and feed status.
+Team B: Build the first API routes for articles and project status.
+Team C: Build the website layout with a home page and article list.
+
+WEEK 4 - Add news feeds
+Team A: Add RSS feeds and save news headlines and short summaries.
+Team B: Add feed refresh and track errors from feeds that do not load.
+Team C: Show feed status and add a button to refresh the feeds.
+
+WEEK 5 - Add search
+Team A: Add article dates, sources, and categories to the database.
+Team B: Build search and filters for date, source, and category.
+Team C: Add the search box, filters, and article reading page.
+
+WEEK 6 - Group related stories
+Team A: Prepare article data so stories from different sources can be compared.
+Team B: Build a feature that groups articles about the same event.
+Team C: Add a page to show story groups and compare selected articles.
+
+WEEK 7 - Add AI features
+Team A: Prepare sample questions and articles to check AI answers.
+Team B: Add article summaries, answers with source links, and a no-answer response when information is missing.
+Team C: Add the summary and question pages and show links to the sources.
+
+WEEK 8 - Check the main features
+Team A: Make a list of expected answers and results for project checks.
+Team B: Build checks for search results, source links, and missing information.
+Team C: Add a page to show check results and fix display problems.
+
+WEEK 9 - Connect and fix the project
+Team A: Check article data and fix problems with dates, sources, or categories.
+Team B: Fix problems in feeds, search, story groups, and AI answers.
+Team C: Connect all pages and fix problems moving between features.
+
+WEEK 10 - Finish the project
+Team A: Check the database and write simple notes about how it works.
+Team B: Fix final backend problems and write setup instructions.
+Team C: Check the full website and prepare a short project demonstration.
