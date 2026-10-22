@@ -1,13 +1,13 @@
 """
-app.py — PulseWire newsroom frontend (layout modelled on the Dribbble reference video).
+Streamlit frontend for the configurable newsroom assistant.
 
 Run with:
     streamlit run app.py
 
-Connects to the FastAPI backend at http://127.0.0.1:8000
-(start it separately with: uvicorn main:app --reload, from backend/)
+The backend address and app name are read from the project configuration.
 """
 
+import html
 import json
 import sys
 from pathlib import Path
@@ -16,10 +16,26 @@ import requests
 import streamlit as st
 import streamlit.components.v1 as components
 
-API = "http://127.0.0.1:8000"
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = PROJECT_DIR / "backend"
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+from config import (  # noqa: E402
+    API_URL,
+    APP_NAME,
+    AUTO_REFRESH_ENABLED,
+    FEED_REFRESH_INTERVAL_SECONDS,
+    OUTLET_METADATA,
+    STATUS_REFRESH_INTERVAL_SECONDS,
+    DEFAULT_FEEDS,
+    SOURCE_TERMS,
+)
+
+API = API_URL
 
 st.set_page_config(
-    page_title="PulseWire — Newsroom",
+    page_title=f"{APP_NAME} — Newsroom",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -40,9 +56,9 @@ def _fetch_initial_state() -> dict:
     """Fetch initial state from FastAPI, or fall back to reading the backend modules directly."""
     try:
         stats_r = requests.get(f"{API}/stats", timeout=4)
-        arts_r = requests.get(f"{API}/articles", params={"limit": 150}, timeout=4)
-        clust_r = requests.get(f"{API}/clusters", timeout=4)
-        eval_r = requests.get(f"{API}/evaluate", timeout=6)
+        arts_r = requests.get(f"{API}/articles", params={"limit": 150}, timeout=6)
+        clust_r = requests.get(f"{API}/clusters", timeout=6)
+        eval_r = requests.get(f"{API}/evaluate", timeout=10)
         if stats_r.ok and arts_r.ok:
             return {
                 "online": True,
@@ -55,22 +71,24 @@ def _fetch_initial_state() -> dict:
         pass
 
     try:
-        backend_dir = Path(__file__).resolve().parent.parent / "backend"
-        if str(backend_dir) not in sys.path:
-            sys.path.insert(0, str(backend_dir))
         import db
         import eval_suite
-        import ingest
         import llm
         import search as search_module
 
         db.init_db()
         stats = db.get_stats()
-        stats["configured_feeds"] = ingest.DEFAULT_FEEDS
-        stats["source_terms"] = ingest.SOURCE_TERMS
+        stats["configured_feeds"] = DEFAULT_FEEDS
+        stats["source_terms"] = SOURCE_TERMS
+        stats["outlet_metadata"] = OUTLET_METADATA
         stats["categories"] = llm.CATEGORIES
         stats["api_key_configured"] = llm.is_api_key_configured()
-        stats["live_feed"] = {"enabled": True, "interval_seconds": 180}
+        stats["live_feed"] = {
+            "enabled": AUTO_REFRESH_ENABLED,
+            "interval_seconds": FEED_REFRESH_INTERVAL_SECONDS,
+        }
+        stats["status_refresh_seconds"] = STATUS_REFRESH_INTERVAL_SECONDS
+        stats["app_name"] = APP_NAME
         return {
             "online": False,
             "stats": stats,
@@ -79,7 +97,25 @@ def _fetch_initial_state() -> dict:
             "evaluation": eval_suite.run_evaluation(),
         }
     except Exception as exc:
-        return {"online": False, "error": str(exc), "stats": {}, "articles": [], "clusters": [], "evaluation": {}}
+        return {
+            "online": False,
+            "error": str(exc),
+            "stats": {
+                "app_name": APP_NAME,
+                "configured_feeds": DEFAULT_FEEDS,
+                "source_terms": SOURCE_TERMS,
+                "outlet_metadata": OUTLET_METADATA,
+                "categories": [],
+                "live_feed": {
+                    "enabled": AUTO_REFRESH_ENABLED,
+                    "interval_seconds": FEED_REFRESH_INTERVAL_SECONDS,
+                },
+                "status_refresh_seconds": STATUS_REFRESH_INTERVAL_SECONDS,
+            },
+            "articles": [],
+            "clusters": [],
+            "evaluation": {},
+        }
 
 
 initial_state = _fetch_initial_state()
@@ -802,7 +838,7 @@ a { color: inherit; }
         <div class="nav-left">
             <button class="logo-pill" onclick="setView('home')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>
-                PulseWire
+                __APP_NAME__
             </button>
             <button class="nav-pill" data-view="home" onclick="setView('home')">All <span class="plus">+</span></button>
             <button class="nav-pill" data-view="news" onclick="openCategory('All')">News <span class="plus">+</span></button>
@@ -812,7 +848,7 @@ a { color: inherit; }
             <button class="nav-pill" data-view="eval" onclick="setView('eval')">Evaluation <span class="plus">+</span></button>
         </div>
         <div class="nav-right">
-            <button class="live" onclick="triggerLiveSync()" title="Feeds refresh every 3 minutes. Click to refresh now.">
+            <button class="live" onclick="triggerLiveSync()" title="Click to refresh feeds now.">
                 <span class="live-dot"></span><span id="live-text">Live</span>
             </button>
             <div class="search">
@@ -829,8 +865,10 @@ a { color: inherit; }
 <button class="tray-fab" id="tray-fab" onclick="setView('clusters')">Compare coverage <b id="tray-count">0</b></button>
 
 <script>
-const API = "http://127.0.0.1:8000";
+const API = __API_URL_JSON__;
 const INITIAL = __INITIAL_DATA__;
+const APP_NAME = (INITIAL.stats && INITIAL.stats.app_name) || "Newsroom";
+document.title = `${APP_NAME} — Newsroom`;
 
 const ICON_ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 const ICON_LEFT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
@@ -881,41 +919,22 @@ function hasPhoto(a) {
 }
 function findArt(id) { return state.articles.find(a => a.id === id) || (state.searchResults || []).find(a => a.id === id); }
 
-/* All 11 verified news outlets with official domain & logo assets */
-const OUTLET_META = {
-    "BBC World": { short: "BBC", slug: "bbc_com", domain: "bbc.com" },
-    "The Guardian World": { short: "Guardian", slug: "theguardian_com", domain: "theguardian.com" },
-    "NYT World": { short: "NYT", slug: "nytimes_com", domain: "nytimes.com" },
-    "Al Jazeera": { short: "Al Jazeera", slug: "aljazeera_com", domain: "aljazeera.com" },
-    "The Hindu": { short: "The Hindu", slug: "thehindu_com", domain: "thehindu.com" },
-    "CNN World": { short: "CNN", slug: "cnn_com", domain: "cnn.com" },
-    "NPR News": { short: "NPR", slug: "npr_org", domain: "npr.org" },
-    "CNBC World": { short: "CNBC", slug: "cnbc_com", domain: "cnbc.com" },
-    "DW News": { short: "DW", slug: "dw_com", domain: "dw.com" },
-    "France 24": { short: "France 24", slug: "france24_com", domain: "france24.com" },
-    "ABC News": { short: "ABC News", slug: "abcnews_go_com", domain: "abcnews.go.com" },
-};
-
 function getOutletMeta(src) {
-    if (!src) return { short: "Wire", slug: "", domain: "" };
-    if (OUTLET_META[src]) return OUTLET_META[src];
-    const sLow = String(src).toLowerCase();
-    for (const [k, v] of Object.entries(OUTLET_META)) {
-        if (sLow.includes(v.short.toLowerCase())) return v;
-    }
-    return { short: src, slug: "", domain: "" };
+    if (!src) return { short: "Source", slug: "" };
+    const meta = (state.stats.outlet_metadata || {})[src] || {};
+    return { short: meta.short || src, slug: meta.slug || "" };
 }
 
 function shortSource(src) {
     return getOutletMeta(src).short;
 }
 
-/* Render the authentic official logo for the outlet */
+/* Use a bundled publisher logo when available, with initials for any other source. */
 function outletLogo(src, size) {
     const s = size || 16;
     const meta = getOutletMeta(src);
     const b64 = (state.logos || {})[meta.slug];
-    const imgSrc = b64 || (meta.domain ? `https://www.google.com/s2/favicons?domain=${meta.domain}&sz=64` : "");
+    const imgSrc = b64 || "";
     if (imgSrc) {
         return `<span class="outlet-logo" style="width:${s}px;height:${s}px;" title="${esc(src)}"><img src="${imgSrc}" alt="${esc(src)}" width="${s}" height="${s}" onerror="this.style.display='none'" /></span>`;
     }
@@ -1071,7 +1090,7 @@ function synthesizeLocally(query) {
     const stop = new Set(["the","and","for","with","what","how","why","who","are","about","from","into","that","this","have","has","was","were","tell","summarize","summary","all","sources","latest","reports","happening","happened"]);
     const qTerms = String(query || "").toLowerCase().match(/[a-z0-9]{3,}/g)?.filter(w => !stop.has(w)).map(w => w.replace(/(?:ing|es|s)$/, "")) || [];
     if (!qTerms.length) {
-        return { insufficient_evidence: true, answer: "Please enter specific topic keywords (for example, 'Nepal floods' or 'US Iran strikes') to synthesize sources.", outlets_synthesized: [], citations: [] };
+        return { insufficient_evidence: true, answer: "Please enter a few topic keywords so the archive can find matching stories.", outlets_synthesized: [], citations: [] };
     }
     const scored = [];
     for (const a of state.articles) {
@@ -1210,9 +1229,14 @@ async function triggerLiveSync(silent) {
     }
 }
 
-// Background auto-refresh: polls stats every 25s and syncs feeds every 180s
-setInterval(refreshLiveStats, 25000);
-setInterval(() => triggerLiveSync(true), 180000);
+// Use refresh settings returned by the backend.
+const STATUS_REFRESH_MS = Math.max(1000, Number(state.stats.status_refresh_seconds || 25) * 1000);
+const liveFeed = state.stats.live_feed || {};
+setInterval(refreshLiveStats, STATUS_REFRESH_MS);
+if (liveFeed.enabled !== false) {
+    const FEED_REFRESH_MS = Math.max(1000, Number(liveFeed.interval_seconds || 180) * 1000);
+    setInterval(() => triggerLiveSync(true), FEED_REFRESH_MS);
+}
 
 async function summarizeArticle(id, btn) {
     if (btn) btn.textContent = "Summarizing...";
@@ -1296,15 +1320,9 @@ function buildHomeSlots() {
     const arts = state.articles;
     const photos = arts.filter(hasPhoto);
     const used = new Set();
-    /* Pick the 3 Hero stories from distinct outlets first so one feed doesn't dominate the top stack */
+    /* Pick Hero stories from distinct configured sources first so one feed doesn't dominate the top stack. */
     const heroOut = [];
     const seenSources = new Set();
-    const preferredOrder = ["BBC World", "The Guardian World", "NYT World", "CNN World", "Al Jazeera", "The Hindu", "DW News", "France 24", "ABC News", "NPR News", "CNBC World"];
-    for (const src of preferredOrder) {
-        if (heroOut.length >= 3) break;
-        const match = photos.find(a => a.source === src && !used.has(a.id));
-        if (match) { used.add(match.id); seenSources.add(match.source); heroOut.push(match); }
-    }
     for (const a of photos) {
         if (heroOut.length >= 3) break;
         if (!used.has(a.id) && !seenSources.has(a.source)) { used.add(a.id); seenSources.add(a.source); heroOut.push(a); }
@@ -1338,6 +1356,7 @@ function renderHome() {
     if (!state.articles.length) {
         return `<div class="sec"><div class="empty">No stories yet. <button class="link-btn" onclick="triggerLiveSync()">Refresh the feeds ${ICON_ARROW}</button></div></div>`;
     }
+    const topicCategories = (state.stats.categories || []).filter(c => c.toLowerCase() !== "other").slice(0, 4);
     const s = buildHomeSlots();
     state.heroList = s.hero;
     if (state.heroIndex >= s.hero.length) state.heroIndex = 0;
@@ -1366,12 +1385,12 @@ function renderHome() {
             <button class="link-btn" onclick="setView('ask')">Open full Q&amp;A workspace ${ICON_ARROW}</button>
         </div>
         <div class="briefing-controls">
-            <input id="home-brief-in" type="text" value="${esc(state.homeBriefingQuery)}" placeholder="Ask AI to summarize a topic across all sources (e.g. Nepal floods, US-Iran strikes, West Bank)..." onkeydown="if(event.key==='Enter') runHomeBriefing(this.value)" />
+            <input id="home-brief-in" type="text" value="${esc(state.homeBriefingQuery)}" placeholder="Ask AI to summarize a topic across all sources..." onkeydown="if(event.key==='Enter') runHomeBriefing(this.value)" />
             <button class="read-btn dark" id="home-brief-btn" onclick="runHomeBriefing(document.getElementById('home-brief-in').value)">Synthesize &amp; cite <span class="arr">${ICON_ARROW}</span></button>
         </div>
         <div class="briefing-topics">
             <span>Try a live topic:</span>
-            ${["Nepal floods", "US and Iran military strikes", "Nepal hydropower workers rescue", "Israeli generals West Bank settlers"].map(t => `<button onclick="runHomeBriefing(${jsq(t)})">${esc(t)}</button>`).join("")}
+            ${topicCategories.map(c => `<button onclick="runHomeBriefing(${jsq(`Recent ${c.toLowerCase()} coverage`)})">${esc(c)}</button>`).join("")}
         </div>
         ${state.homeBriefingResult ? renderBriefingCard(
             state.homeBriefingResult,
@@ -1684,25 +1703,22 @@ async function runCompare(btn) {
         state.analyzeResult = d;
         if (state.view !== "clusters") setView("clusters"); else render();
     } catch (e) {
-        alert("Couldn't reach the backend. Start it with: uvicorn main:app --reload");
+        alert("Couldn't reach the backend. Start it with: python backend\\run.py");
         render();
     }
 }
 
 function renderAsk() {
     const res = state.askResult;
-    const examples = [
-        "Summarize the Nepal floods across all sources",
-        "What happened in the Nepal hydropower workers rescue operation?",
-        "What are the latest reports on US and Iran trading military strikes?",
-        "What are former Israeli generals saying about West Bank settlers?",
-        "What did the Central Bank of Mars announce about lunar tariffs?",
-    ];
+    const examples = (state.stats.categories || [])
+        .filter(category => category.toLowerCase() !== "other")
+        .slice(0, 5)
+        .map(category => `Summarize recent ${category.toLowerCase()} coverage across sources`);
     return `
     <div class="sec">
         ${toolHead("Ask the archive", "Multi-source synthesis you can verify", "Ask about any topic or event. The assistant gathers every matching dispatch across all news outlets, synthesizes a single summary with inline clickable citations [Outlet, #ID], and shows the exact supporting excerpts below. If the archive lacks evidence, it says so instead of guessing.")}
         <div class="ask-box">
-            <input id="ask-input" type="text" value="${esc(state.lastQuestion)}" placeholder="Ask about a topic (e.g. Nepal floods, US-Iran strikes, West Bank)..." onkeydown="if(event.key==='Enter') executeAsk(this.value)" />
+            <input id="ask-input" type="text" value="${esc(state.lastQuestion)}" placeholder="Ask about a topic in the archive..." onkeydown="if(event.key==='Enter') executeAsk(this.value)" />
             <button class="read-btn dark" id="ask-btn" onclick="executeAsk(document.getElementById('ask-input').value)">Synthesize &amp; cite <span class="arr">${ICON_ARROW}</span></button>
         </div>
         <div class="tag-cloud" style="margin-bottom:26px;">${examples.map(q => `<button onclick="executeAsk(${jsq(q)})">${esc(q)}</button>`).join("")}</div>
@@ -1729,7 +1745,7 @@ function renderFeeds() {
     const lf = state.stats.live_feed || {};
     return `
     <div class="sec">
-        ${toolHead("Feeds", "Sources & refresh status", `Feeds refresh automatically every ${Math.round((lf.interval_seconds || 180) / 60)} minutes. Each story keeps two times: when the publisher published it, and when this app retrieved it. Only headlines and feed excerpts are stored, with a link back to the publisher.`)}
+        ${toolHead("Feeds", "Sources & refresh status", `${lf.enabled === false ? "Automatic feed refresh is disabled." : `Feeds refresh automatically every ${Math.max(1, Math.round((lf.interval_seconds || 180) / 60))} minutes.`} Each story keeps two times: when the publisher published it, and when this app retrieved it. Only headlines and feed excerpts are stored, with a link back to the publisher.`)}
         <div class="stats">
             <div class="stat"><small>Stories stored</small><div>${state.stats.total_articles || 0}</div></div>
             <div class="stat"><small>Sources healthy</small><div>${healthy} / ${statuses.length}</div></div>
@@ -1809,8 +1825,8 @@ function renderFooter() {
             </div>
         </div>
         <div class="f-bottom">
-            <span class="f-logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>PulseWire</span>
-            <span>© 2026 PulseWire newsroom assistant</span>
+            <span class="f-logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>${esc(APP_NAME)}</span>
+            <span>© ${new Date().getFullYear()} ${esc(APP_NAME)} newsroom assistant</span>
         </div>
     </div>`;
 }
@@ -1834,7 +1850,10 @@ render();
 """
 
 components.html(
-    HTML_TEMPLATE.replace("__INITIAL_DATA__", initial_json),
+    HTML_TEMPLATE
+        .replace("__APP_NAME__", html.escape(APP_NAME))
+        .replace("__API_URL_JSON__", json.dumps(API))
+        .replace("__INITIAL_DATA__", initial_json),
     height=920,
     scrolling=True,
 )

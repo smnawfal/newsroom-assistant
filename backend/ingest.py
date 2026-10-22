@@ -15,67 +15,13 @@ from typing import Optional
 import feedparser
 import requests
 
+from config import (
+    DEFAULT_FEEDS,
+    FEED_REQUEST_TIMEOUT_SECONDS,
+    FEED_USER_AGENT,
+    SOURCE_TERMS,
+)
 from db import init_db, insert_article, record_feed_status
-
-DEFAULT_FEEDS = {
-    "BBC World": "http://feeds.bbci.co.uk/news/world/rss.xml",
-    "The Guardian World": "https://www.theguardian.com/world/rss",
-    "NYT World": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
-    "The Hindu": "https://www.thehindu.com/news/national/feeder/default.rss",
-    "CNN World": "http://rss.cnn.com/rss/edition_world.rss",
-    "NPR News": "https://feeds.npr.org/1001/rss.xml",
-    "CNBC World": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
-    "DW News": "https://rss.dw.com/xml/rss-en-world",
-    "France 24": "https://www.france24.com/en/rss",
-    "ABC News": "https://abcnews.go.com/abcnews/internationalheadlines",
-}
-
-SOURCE_TERMS = {
-    "BBC World": (
-        "BBC RSS Terms: Personal/research syndication of headlines and short summaries "
-        "is permitted with attribution and direct link back to BBC News. Full-text scraping is prohibited."
-    ),
-    "The Guardian World": (
-        "Guardian Open Platform / RSS Terms: Excerpts and headlines may be indexed with attribution "
-        "and unaltered links to theguardian.com. Full-article reproduction requires an API/syndication license."
-    ),
-    "NYT World": (
-        "NYT RSS Terms: Feeds provide headlines and short standfirst excerpts for reader discovery "
-        "with direct links to nytimes.com. Full article text sits behind publisher access rules."
-    ),
-    "Al Jazeera": (
-        "Al Jazeera RSS Policy: Headlines and summary descriptions are provided for syndication with "
-        "direct attribution and link to aljazeera.com."
-    ),
-    "The Hindu": (
-        "The Hindu RSS Policy: Provides national news headlines and lead summaries for non-commercial "
-        "reader aggregation with mandatory link back to thehindu.com."
-    ),
-    "CNN World": (
-        "CNN RSS Terms: Feeds provide headlines and brief lead text for syndication with direct "
-        "links to cnn.com. Unaltered attribution required."
-    ),
-    "NPR News": (
-        "NPR Terms of Use: Syndicated headlines and story summaries for non-commercial reader indexing "
-        "with direct attribution to NPR."
-    ),
-    "CNBC World": (
-        "CNBC RSS Policy: Provides international business and world headlines with excerpts linking "
-        "back to cnbc.com."
-    ),
-    "DW News": (
-        "Deutsche Welle RSS Terms: Syndication feeds offer global news headlines and teaser summaries "
-        "under DW distribution guidelines."
-    ),
-    "France 24": (
-        "France 24 RSS Terms: International broadcast headlines and lead summaries available for reader "
-        "aggregation with links to france24.com."
-    ),
-    "ABC News": (
-        "ABC News RSS Terms: RSS feed offers headlines and brief story excerpts linking to abcnews.go.com."
-    ),
-}
 
 
 def _clean_text(raw: str) -> str:
@@ -140,14 +86,10 @@ def ingest_feeds(
                 resp = requests.get(
                     feed_url,
                     headers={
-                        "User-Agent": (
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                            "AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/124.0.0.0 Safari/537.36 Newsroom/1.0"
-                        ),
+                        "User-Agent": FEED_USER_AGENT,
                         "Accept": "application/rss+xml, application/xml, text/xml, */*",
                     },
-                    timeout=14,
+                    timeout=FEED_REQUEST_TIMEOUT_SECONDS,
                 )
                 if resp.status_code >= 400:
                     raise RuntimeError(f"HTTP {resp.status_code} when fetching feed")
@@ -156,7 +98,7 @@ def ingest_feeds(
                 # Fallback to feedparser direct fetch if requests fails
                 parsed = feedparser.parse(
                     feed_url,
-                    agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsroomAssistant/1.0",
+                    agent=FEED_USER_AGENT,
                 )
                 status_code = getattr(parsed, "status", 200)
                 if status_code and int(status_code) >= 400:

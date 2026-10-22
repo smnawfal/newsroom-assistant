@@ -6,68 +6,27 @@ completeness, multi-outlet framing representation, and insufficient-evidence
 guardrails against known ground-truth articles in the local archive.
 """
 
+import json
 from pathlib import Path
 from typing import Optional
 
+from config import EVALUATION_CASES_PATH
 import llm
 import search as search_module
 
-BENCHMARK_CASES = [
-    {
-        "id": "eval_nepal_rescue",
-        "category": "Single-Event Factual Lookup",
-        "question": "What happened in the Nepal hydropower workers rescue operation and what is the flooding death toll?",
-        "expected_sources": ["BBC World"],
-        "expected_article_ids": [1],
-        "expected_facts": ["explosives", "939"],
-        "expect_insufficient_evidence": False,
-    },
-    {
-        "id": "eval_us_iran_strikes",
-        "category": "Cross-Outlet Geopolitics",
-        "question": "What are the latest reports on US and Iran trading military strikes?",
-        "expected_sources": ["BBC World"],
-        "expected_article_ids": [2],
-        "expected_facts": ["iran", "strikes"],
-        "expect_insufficient_evidence": False,
-    },
-    {
-        "id": "eval_israel_west_bank",
-        "category": "Framing & Internal Disagreement",
-        "question": "What are former Israeli generals and intelligence officials saying about West Bank settlers?",
-        "expected_sources": ["NYT World"],
-        "expected_article_ids": [28],
-        "expected_facts": ["generals", "west bank", "settlers"],
-        "expect_insufficient_evidence": False,
-    },
-    {
-        "id": "eval_india_kerala_politics",
-        "category": "National Political Coverage",
-        "question": "What accusation did Pinarayi make regarding the Taliparamba MLA and CPI(M) leadership?",
-        "expected_sources": ["The Hindu"],
-        "expected_article_ids": [111],
-        "expected_facts": ["pinarayi", "cpi(m)"],
-        "expect_insufficient_evidence": False,
-    },
-    {
-        "id": "eval_india_factory_blast",
-        "category": "Breaking Incident Verification",
-        "question": "How many children were killed in the firecracker factory blast in India?",
-        "expected_sources": ["Al Jazeera"],
-        "expected_article_ids": [86],
-        "expected_facts": ["8", "children", "firecracker"],
-        "expect_insufficient_evidence": False,
-    },
-    {
-        "id": "eval_guardrail_unanswerable",
-        "category": "Insufficient-Evidence Guardrail",
-        "question": "What did the Central Bank of Mars announce about lunar thorium tariffs in Antarctica?",
-        "expected_sources": [],
-        "expected_article_ids": [],
-        "expected_facts": ["insufficient evidence"],
-        "expect_insufficient_evidence": True,
-    },
-]
+try:
+    BENCHMARK_CASES = json.loads(EVALUATION_CASES_PATH.read_text(encoding="utf-8"))
+except FileNotFoundError as exc:
+    raise RuntimeError(f"Evaluation cases file not found: {EVALUATION_CASES_PATH}") from exc
+except json.JSONDecodeError as exc:
+    raise RuntimeError(f"Invalid evaluation cases JSON: {exc}") from exc
+
+if not isinstance(BENCHMARK_CASES, list) or not all(
+    isinstance(case, dict)
+    and all(key in case for key in ("id", "category", "question", "expected_sources", "expected_article_ids", "expected_facts", "expect_insufficient_evidence"))
+    for case in BENCHMARK_CASES
+):
+    raise RuntimeError("Evaluation cases must be a list of complete case objects")
 
 
 def run_evaluation(db_path: Optional[Path] = None) -> dict:
@@ -152,7 +111,7 @@ def run_evaluation(db_path: Optional[Path] = None) -> dict:
         "passed_cases": passed_count,
         "failed_cases": total - passed_count,
         "pass_rate_pct": round((passed_count / total) * 100, 1) if total else 0.0,
-        "llm_mode": "Claude Sonnet 4.6 API" if llm.is_api_key_configured() else "Deterministic Extractive Verification Mode",
+        "llm_mode": f"{llm.MODE} API" if llm.is_api_key_configured() else "Deterministic Extractive Verification Mode",
         "failures_tracked": failures_tracked,
         "cases": results,
     }

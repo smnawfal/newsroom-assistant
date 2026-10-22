@@ -1,0 +1,25 @@
+{
+  "categories": [
+    "Politics",
+    "Business",
+    "Technology",
+    "World",
+    "Health",
+    "Science",
+    "Sports",
+    "Entertainment",
+    "Environment",
+    "Other"
+  ],
+  "keywords": {
+    "Politics": ["minister", "president", "election", "parliament", "party", "senate", "policy", "government", "vote", "legislation", "campaign", "court", "law"],
+    "Business": ["market", "economy", "bank", "trade", "tariff", "stock", "company", "billion", "inflation", "oil", "tax", "invest"],
+    "Technology": ["ai", "tech", "software", "cyber", "apple", "google", "microsoft", "chip", "digital", "robot", "internet", "data"],
+    "Health": ["health", "hospital", "vaccine", "virus", "medical", "doctor", "disease", "who", "patient", "drug"],
+    "Science": ["space", "nasa", "research", "scientist", "physics", "astronomy", "satellite", "discovery", "biology"],
+    "Sports": ["match", "tournament", "cup", "olympic", "cricket", "football", "soccer", "player", "coach", "league"],
+    "Entertainment": ["film", "movie", "actor", "music", "festival", "book", "culture", "art", "award"],
+    "Environment": ["climate", "flood", "wildfire", "earthquake", "storm", "emissions", "glacier", "pollution", "weather"],
+    "World": ["war", "military", "strike", "strikes", "diplomat", "diplomacy", "border", "international", "foreign", "sanctions"]
+  }
+}

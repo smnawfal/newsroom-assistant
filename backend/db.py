@@ -13,7 +13,9 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path(__file__).parent / "newsroom.db"
+from config import CATEGORY_KEYWORDS, DATABASE_PATH, EXCERPT_WORD_LIMIT
+
+DB_PATH = DATABASE_PATH
 
 STOPWORDS = {
     "a", "about", "an", "and", "are", "as", "at", "be", "by", "can", "did",
@@ -62,21 +64,11 @@ def compute_content_metrics(title: str, content: str) -> tuple[int, int]:
     clean_title = (title or "").strip()
     words = re.findall(r"\S+", clean_content)
     word_count = len(words)
-    is_excerpt = 1 if (word_count < 120 or clean_content == clean_title) else 0
+    is_excerpt = 1 if (word_count < EXCERPT_WORD_LIMIT or clean_content == clean_title) else 0
     return word_count, is_excerpt
 
 
-_AUTO_CATEGORIES = {
-    "Politics": ["minister", "president", "election", "parliament", "party", "senate", "policy", "government", "vote", "bjp", "congress", "cpi", "mla", "court", "law"],
-    "Business": ["market", "economy", "bank", "trade", "tariff", "stock", "company", "billion", "inflation", "oil", "tax", "invest"],
-    "Technology": ["ai", "tech", "software", "cyber", "apple", "google", "microsoft", "chip", "digital", "robot", "internet", "data"],
-    "Health": ["health", "hospital", "vaccine", "virus", "medical", "doctor", "disease", "who", "patient", "drug"],
-    "Science": ["space", "nasa", "research", "scientist", "physics", "astronomy", "satellite", "discovery", "biology"],
-    "Sports": ["match", "tournament", "cup", "olympic", "cricket", "football", "soccer", "player", "coach", "league"],
-    "Entertainment": ["film", "movie", "actor", "music", "festival", "book", "culture", "art", "award"],
-    "Environment": ["climate", "flood", "wildfire", "earthquake", "storm", "emissions", "hydropower", "glacier", "pollution", "weather"],
-    "World": ["war", "military", "strike", "strikes", "un", "israel", "iran", "gaza", "ukraine", "russia", "china", "diplomat", "border"],
-}
+_AUTO_CATEGORIES = CATEGORY_KEYWORDS
 
 
 def _infer_category_and_tags(title: str, content: str) -> tuple[str, str]:

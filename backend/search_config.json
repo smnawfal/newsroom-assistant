@@ -1,0 +1,13 @@
+{
+  "synonyms": {
+    "strike": ["strikes", "striking", "attack", "attacks", "military", "missile"],
+    "strikes": ["strike", "attack", "attacks", "missile", "bombing"],
+    "election": ["elections", "electoral", "vote", "voting", "ballot", "polls", "campaign"],
+    "voting": ["vote", "election", "elections", "ballot", "polls"],
+    "economy": ["economic", "inflation", "gdp", "markets", "trade", "financial", "bank"],
+    "climate": ["environment", "warming", "emissions", "flood", "flooding", "weather"],
+    "flood": ["flooding", "floods", "rain", "monsoon", "rescue", "landslide"],
+    "rescue": ["rescuers", "trapped", "search", "blast", "workers", "relief"],
+    "ai": ["artificial", "intelligence", "tech", "technology", "model", "models"]
+  }
+}

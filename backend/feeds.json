@@ -1,0 +1,15 @@
+{
+  "feeds": {
+    "BBC World": {"url": "https://feeds.bbci.co.uk/news/world/rss.xml", "short_name": "BBC", "logo_key": "bbc_com"},
+    "The Guardian World": {"url": "https://www.theguardian.com/world/rss", "short_name": "Guardian", "logo_key": "theguardian_com"},
+    "NYT World": {"url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "short_name": "NYT", "logo_key": "nytimes_com"},
+    "Al Jazeera": {"url": "https://www.aljazeera.com/xml/rss/all.xml", "short_name": "Al Jazeera", "logo_key": "aljazeera_com"},
+    "The Hindu": {"url": "https://www.thehindu.com/news/national/feeder/default.rss", "short_name": "The Hindu", "logo_key": "thehindu_com"},
+    "CNN World": {"url": "https://rss.cnn.com/rss/edition_world.rss", "short_name": "CNN", "logo_key": "cnn_com"},
+    "NPR News": {"url": "https://feeds.npr.org/1001/rss.xml", "short_name": "NPR", "logo_key": "npr_org"},
+    "CNBC World": {"url": "https://www.cnbc.com/id/100727362/device/rss/rss.html", "short_name": "CNBC", "logo_key": "cnbc_com"},
+    "DW News": {"url": "https://rss.dw.com/xml/rss-en-world", "short_name": "DW", "logo_key": "dw_com"},
+    "France 24": {"url": "https://www.france24.com/en/rss", "short_name": "France 24", "logo_key": "france24_com"},
+    "ABC News": {"url": "https://abcnews.go.com/abcnews/internationalheadlines", "short_name": "ABC News", "logo_key": "abcnews_go_com"}
+  }
+}

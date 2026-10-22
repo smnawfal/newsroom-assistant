@@ -4,7 +4,7 @@ main.py — FastAPI backend for the AI Newsroom Assistant.
 Run with:
     uvicorn main:app --reload
 
-Then visit http://127.0.0.1:8000/docs for interactive API docs.
+Then visit the API docs at the configured backend address followed by `/docs`.
 """
 
 import asyncio
@@ -17,17 +17,25 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from config import (
+    APP_NAME,
+    AUTO_REFRESH_ENABLED,
+    CORS_ORIGINS,
+    DEFAULT_FEEDS,
+    FEED_REFRESH_INTERVAL_SECONDS,
+    OUTLET_METADATA,
+    SOURCE_TERMS,
+    STATUS_REFRESH_INTERVAL_SECONDS,
+)
 import db
 import eval_suite
 import llm
 import search as search_module
-from ingest import DEFAULT_FEEDS, SOURCE_TERMS, ingest_feeds
-
-LIVE_FEED_INTERVAL_SECONDS = 180  # Auto-poll live RSS feeds every 3 minutes
+from ingest import ingest_feeds
 
 _live_state = {
-    "enabled": True,
-    "interval_seconds": LIVE_FEED_INTERVAL_SECONDS,
+    "enabled": AUTO_REFRESH_ENABLED,
+    "interval_seconds": FEED_REFRESH_INTERVAL_SECONDS,
     "last_sync_at": None,
     "last_sync_added": 0,
     "sync_count": 0,
@@ -50,23 +58,24 @@ async def _live_feed_loop():
             await asyncio.to_thread(_run_sync)
         except Exception as exc:
             print(f"[live-feed] Background sync error: {exc}")
-        await asyncio.sleep(LIVE_FEED_INTERVAL_SECONDS)
+        await asyncio.sleep(FEED_REFRESH_INTERVAL_SECONDS)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     db.init_db()
-    task = asyncio.create_task(_live_feed_loop())
+    task = asyncio.create_task(_live_feed_loop()) if AUTO_REFRESH_ENABLED else None
     yield
-    task.cancel()
+    if task is not None:
+        task.cancel()
 
 
-app = FastAPI(title="AI Newsroom Assistant", lifespan=lifespan)
+app = FastAPI(title=APP_NAME, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -124,9 +133,12 @@ def stats():
     data = db.get_stats()
     data["configured_feeds"] = DEFAULT_FEEDS
     data["source_terms"] = SOURCE_TERMS
+    data["outlet_metadata"] = OUTLET_METADATA
     data["categories"] = llm.CATEGORIES
     data["api_key_configured"] = llm.is_api_key_configured()
     data["live_feed"] = _live_state
+    data["app_name"] = APP_NAME
+    data["status_refresh_seconds"] = STATUS_REFRESH_INTERVAL_SECONDS
     return data
 
 
@@ -274,8 +286,9 @@ def ask(req: AskRequest):
 def root():
     return {
         "status": "ok",
-        "message": "AI Newsroom Assistant API. Visit /docs for endpoints.",
+        "message": f"{APP_NAME} API. Visit /docs for endpoints.",
         "configured_feeds": list(DEFAULT_FEEDS.keys()),
         "api_key_configured": llm.is_api_key_configured(),
         "live_feed": _live_state,
+        "app_name": APP_NAME,
     }

@@ -6,49 +6,26 @@ and verifiable source-grounded Q&A with evidence-sufficiency guardrails.
 
 import json
 import os
-from pathlib import Path
 import re
 from typing import Optional
 
 import anthropic
 
+from config import ANTHROPIC_MODEL, CATEGORIES, CATEGORY_KEYWORDS
 from db import STOPWORDS, extract_keywords
 
-MODEL = "claude-sonnet-4-6"
+MODEL = ANTHROPIC_MODEL
 
 _client = None
 
 
-def _load_dotenv_fallback() -> None:
-    """Load key=value pairs from .env in project root or backend/ if present."""
-    for env_path in (
-        Path(__file__).resolve().parent.parent / ".env",
-        Path(__file__).resolve().parent / ".env",
-    ):
-        if env_path.is_file():
-            for line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                k = k.strip()
-                v = v.strip().strip('"').strip("'")
-                if k and k not in os.environ:
-                    os.environ[k] = v
-
-
-_load_dotenv_fallback()
-
-
 def is_api_key_configured() -> bool:
-    _load_dotenv_fallback()
     key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     return bool(key and key != "your_key_here")
 
 
 def get_client() -> anthropic.Anthropic:
     global _client
-    _load_dotenv_fallback()
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key or api_key == "your_key_here":
         raise RuntimeError(
@@ -190,22 +167,7 @@ Summary:"""
     return f"{title.strip()}. {lead}" if title.strip() not in lead else lead
 
 
-CATEGORIES = [
-    "Politics", "Business", "Technology", "World", "Health",
-    "Science", "Sports", "Entertainment", "Environment", "Other",
-]
-
-_CATEGORY_KEYWORDS = {
-    "Politics": ["minister", "president", "election", "parliament", "party", "senate", "policy", "government", "vote", "bjp", "congress", "cpi", "mla", "court", "law"],
-    "Business": ["market", "economy", "bank", "trade", "tariff", "stock", "company", "billion", "inflation", "oil", "tax", "invest"],
-    "Technology": ["ai", "tech", "software", "cyber", "apple", "google", "microsoft", "chip", "digital", "robot", "internet", "data"],
-    "Health": ["health", "hospital", "vaccine", "virus", "medical", "doctor", "disease", "who", "patient", "drug"],
-    "Science": ["space", "nasa", "research", "scientist", "physics", "astronomy", "satellite", "discovery", "biology"],
-    "Sports": ["match", "tournament", "cup", "olympic", "cricket", "football", "soccer", "player", "coach", "league"],
-    "Entertainment": ["film", "movie", "actor", "music", "festival", "book", "culture", "art", "award"],
-    "Environment": ["climate", "flood", "wildfire", "earthquake", "storm", "emissions", "hydropower", "glacier", "pollution", "weather"],
-    "World": ["war", "military", "strike", "strikes", "un", "israel", "iran", "gaza", "ukraine", "russia", "china", "diplomat", "border"],
-}
+_CATEGORY_KEYWORDS = CATEGORY_KEYWORDS
 
 
 def categorize_and_tag(title: str, content: str) -> dict:
@@ -287,7 +249,7 @@ In 4-6 sentences, describe:
 - Any notable facts or angles one source includes that others omit
 - Note clearly if the comparison is based on RSS summaries/excerpts rather than full article text.
 
-Be specific and reference sources and article IDs (e.g. [BBC World, #2]) by name. Avoid speculation beyond what's in the text."""
+Be specific and reference sources and article IDs by name (for example, [Source Name, #2]). Avoid speculation beyond what's in the text."""
 
         return _ask(prompt, max_tokens=550)
 

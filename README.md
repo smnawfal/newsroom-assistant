@@ -1,14 +1,14 @@
-# PulseWire
+# Newsroom Assistant
 
-PulseWire is a small AI newsroom assistant. It collects news headlines from RSS feeds, lets you search and compare stories, and can answer questions with links to its sources.
+A small, configurable newsroom app. It collects headlines and excerpts from RSS feeds, supports search and story comparison, and can answer questions with links to the stored sources. The original project name is PulseWire; you can change it in the settings.
 
-## What you need
+## Requirements
 
-- Python 3
-- An internet connection to refresh RSS feeds
-- An Anthropic API key only if you want to use online AI features
+- Python 3.10 or newer
+- Internet access to retrieve RSS feeds
+- An Anthropic API key for online AI answers (optional)
 
-The project can run without an API key using its built-in offline answer mode.
+Without an API key, the app uses its built-in offline answer mode.
 
 ## Install
 
@@ -18,28 +18,42 @@ Open PowerShell in the project folder and run:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
+
+If PowerShell blocks environment activation, run `Set-ExecutionPolicy -Scope Process Bypass` in that window and activate again.
 
 ## Run
 
-Open two PowerShell windows in the project folder.
+Open two PowerShell windows in the project folder. Activate the virtual environment in each.
 
-In the first window, start the backend:
+In the first window, start the API:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-uvicorn --app-dir backend main:app --reload
+python backend\run.py
 ```
 
-In the second window, start the website:
+In the second window, start the web app:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
 streamlit run frontend\app.py
 ```
 
-Open the local web address shown by Streamlit. Keep both windows open while using the app.
+Open the local address shown by Streamlit. Keep both windows open while using the app.
 
-## Optional AI setup
+## Set up online AI (optional)
 
-Copy `.env.example` to `.env` and add your own API key to `.env` if you want online AI answers. Do not share your `.env` file. Each person should use their own key.
+Open `.env` and add your own API key to `ANTHROPIC_API_KEY`. Keep `.env` private. Each person who uses online AI needs their own key.
+
+## Change the app
+
+The main settings are in `.env`. The editable JSON files are:
+
+- `backend/feeds.json` — source names, RSS URLs, and optional display names and bundled logo keys
+- `backend/categories.json` — categories and their keyword lists
+- `backend/search_config.json` — search synonyms
+- `backend/evaluation_cases.json` — sample questions and expected results
+
+You can change the app name, API host and port, database location, refresh intervals, model, and clustering settings in `.env` (use `.env.example` as a guide). If the browser-facing API address differs from the host and port, set `NEWSROOM_API_URL` too. Relative file paths start from the project folder. When you change feeds or replace the sample archive, update the evaluation cases to match your articles.
+
+The included `backend/newsroom.db` is a sample archive. The app creates its database automatically if the configured database file does not exist.

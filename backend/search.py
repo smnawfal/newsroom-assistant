@@ -9,29 +9,18 @@ from pathlib import Path
 import re
 from typing import Optional
 
+from config import (
+    CLUSTER_MIN_SHARED_TERMS,
+    CLUSTER_SIMILARITY_THRESHOLD,
+    MAX_CLUSTER_ARTICLES,
+    SYNONYM_MAP,
+)
 from db import (
     STOPWORDS,
     extract_keywords,
     get_all_articles,
     search_articles as _keyword_search,
 )
-
-# Common lightweight stem/synonym expansions for journalism queries
-SYNONYM_MAP = {
-    "strike": ["strikes", "striking", "attack", "attacks", "military", "missile"],
-    "strikes": ["strike", "attack", "attacks", "missile", "bombing"],
-    "election": ["elections", "electoral", "vote", "voting", "ballot", "polls", "campaign"],
-    "voting": ["vote", "election", "elections", "ballot", "polls"],
-    "economy": ["economic", "inflation", "gdp", "markets", "trade", "financial", "bank"],
-    "climate": ["environment", "warming", "emissions", "flood", "flooding", "weather"],
-    "flood": ["flooding", "floods", "rain", "monsoon", "rescue", "landslide"],
-    "rescue": ["rescuers", "trapped", "search", "blast", "workers", "relief"],
-    "usa": ["us", "united", "states", "american", "washington", "biden", "trump"],
-    "us": ["usa", "united", "states", "american", "washington"],
-    "uk": ["britain", "british", "london", "england"],
-    "ai": ["artificial", "intelligence", "tech", "technology", "model", "models"],
-}
-
 
 def _tokenize_with_stems(text: str) -> list[str]:
     tokens = re.findall(r"[a-z0-9]{2,}", (text or "").lower())
@@ -169,7 +158,7 @@ def cluster_related_stories(
     high-IDF terms in titles & lead excerpts, prioritizing stories covered
     by 2+ different news outlets.
     """
-    rows = get_all_articles(limit=250, db_path=db_path)
+    rows = get_all_articles(limit=MAX_CLUSTER_ARTICLES, db_path=db_path)
     articles = [dict(r) for r in rows]
     if not articles:
         return []
@@ -205,7 +194,10 @@ def cluster_related_stories(
                 continue
             sim = _tfidf_similarity(seed_toks, doc_tokens[oid], idf)
             shared_terms = set(seed_toks) & set(doc_tokens[oid])
-            if sim >= 0.24 and len(shared_terms) >= 2:
+            if (
+                sim >= CLUSTER_SIMILARITY_THRESHOLD
+                and len(shared_terms) >= CLUSTER_MIN_SHARED_TERMS
+            ):
                 members.append(other)
                 outlets.add(other.get("source", ""))
 
